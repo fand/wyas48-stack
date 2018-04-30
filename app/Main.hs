@@ -1,6 +1,8 @@
 module Main where
-
-import Lib
+import System.Environment
 
 main :: IO ()
-main = someFunc
+main = do
+  putStrLn "Input your name:"
+  name <- getLine
+  putStrLn ("Hello, " ++ name)
