@@ -8,6 +8,7 @@ data LispVal = Atom String
              | List [LispVal]
              | DottedList [LispVal] LispVal
              | Number Integer
+             | Float Double
              | String String
              | Bool Bool
              | Character Char
@@ -69,7 +70,7 @@ parseNumber = try $ parseHex <|> parseDecimal <|> parseDigits
 
 parseCharacter :: Parser LispVal
 parseCharacter = do
-  try $string "#\\"
+  try $ string "#\\"
   value <- try (string "newline" <|> string "space")
     <|> do
       x <- anyChar
@@ -80,9 +81,17 @@ parseCharacter = do
     "space"   -> ' '
     _         -> head value
 
+parseFloat :: Parser LispVal
+parseFloat = do
+  x <- many1 digit
+  char '.'
+  y <- many1 digit
+  return $ Float $ fst . head $ readFloat (x ++ "." ++ y)
+
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
   <|> parseString
+  <|> try parseFloat
   <|> try parseNumber
   <|> try parseBool
   <|> try parseCharacter
