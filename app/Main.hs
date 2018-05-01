@@ -10,6 +10,7 @@ data LispVal = Atom String
              | Number Integer
              | String String
              | Bool Bool
+             | Character Char
              deriving Show
 
 symbol :: Parser Char
@@ -66,11 +67,25 @@ parseNumber :: Parser LispVal
 parseNumber = try $ parseHex <|> parseDecimal <|> parseDigits
 -- tryを外すと、 #t を解釈できずに落ちるので注意
 
+parseCharacter :: Parser LispVal
+parseCharacter = do
+  try $string "#\\"
+  value <- try (string "newline" <|> string "space")
+    <|> do
+      x <- anyChar
+      notFollowedBy alphaNum
+      return [x]
+  return $ Character $ case value of
+    "newline" -> '\n'
+    "space"   -> ' '
+    _         -> head value
+
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
   <|> parseString
-  <|> parseNumber
-  <|> parseBool
+  <|> try parseNumber
+  <|> try parseBool
+  <|> try parseCharacter
 
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
