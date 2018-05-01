@@ -1,5 +1,7 @@
 module Main where
 import           Control.Monad
+import           Data.Complex
+import           Data.Ratio
 import           Numeric
 import           System.Environment
 import           Text.ParserCombinators.Parsec
@@ -9,6 +11,8 @@ data LispVal = Atom String
              | DottedList [LispVal] LispVal
              | Number Integer
              | Float Double
+             | Ratio Rational
+             | Comp (Complex Double)
              | String String
              | Bool Bool
              | Character Char
@@ -88,10 +92,31 @@ parseFloat = do
   y <- many1 digit
   return $ Float $ fst . head $ readFloat (x ++ "." ++ y)
 
+parseRatio :: Parser LispVal
+parseRatio = do
+  x <- many1 digit
+  char '/'
+  y <- many1 digit
+  return $ Ratio $ read x % read y
+
+parseComplex :: Parser LispVal
+parseComplex = do
+  x <- try parseFloat <|> parseDecimal
+  char '+'
+  y <- try parseFloat <|> parseDecimal
+  char 'i'
+  return $ Comp (toDouble x :+ toDouble y)
+
+toDouble :: LispVal -> Double
+toDouble(Float f)  = f
+toDouble(Number n) = fromIntegral n
+
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
   <|> parseString
   <|> try parseFloat
+  <|> try parseRatio
+  <|> try parseComplex
   <|> try parseNumber
   <|> try parseBool
   <|> try parseCharacter
