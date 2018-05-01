@@ -1,5 +1,6 @@
 module Main where
 import           Control.Monad
+import           Numeric
 import           System.Environment
 import           Text.ParserCombinators.Parsec
 
@@ -9,12 +10,13 @@ data LispVal = Atom String
              | Number Integer
              | String String
              | Bool Bool
+             deriving Show
 
 symbol :: Parser Char
-symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
+symbol = oneOf "!$%&|*+-/:<=>?@^_~"
 
 escapedChar :: Parser Char
-escapedChar = char '\\' >> oneOf "\\\""
+escapedChar = char '\\' >> oneOf "\\\"nrt"
 
 parseString :: Parser LispVal
 parseString = do
@@ -23,26 +25,57 @@ parseString = do
   char '"'
   return $ String x
 
+parseBool :: Parser LispVal
+parseBool = do
+  string "#"
+  x <- oneOf "tf"
+  return $ case x of
+    't' -> Bool True
+    'f' -> Bool False
+
 parseAtom :: Parser LispVal
 parseAtom = do
   first <- letter <|> symbol
   rest <- many (letter <|> digit <|> symbol)
-  let atom = first:rest
-  return $ case atom of
-    "#t" -> Bool True
-    "#f" -> Bool False
-    _    -> Atom atom
+  return $ Atom $ first:rest
+
+parseHex :: Parser LispVal
+parseHex = do
+  try $ string "#x"
+  x <- many1 hexDigit
+  return $ Number $ fst $ head $ readHex x
+
+parseDigits :: Parser LispVal
+parseDigits = do
+  try $ char '#'
+  second <- oneOf "odb"
+  rest <- many1 digit
+  return $ Number $ case second of
+    'o' -> fst $ head $ readOct rest
+    'd' -> read rest
+    'b' -> parseBin 0 rest
+
+parseBin :: Integer -> String -> Integer
+parseBin acc ""     = acc
+parseBin acc (x:xs) = acc * 2 + parseBin (if x == '0' then 0 else 1) xs
+
+parseDecimal :: Parser LispVal
+parseDecimal = (Number . read) <$> many1 digit
 
 parseNumber :: Parser LispVal
-parseNumber = (Number . read) <$> many1 digit
+parseNumber = try $ parseHex <|> parseDecimal <|> parseDigits
+-- tryを外すと、 #t を解釈できずに落ちるので注意
 
 parseExpr :: Parser LispVal
-parseExpr = parseAtom <|> parseString <|> parseNumber
+parseExpr = parseAtom
+  <|> parseString
+  <|> parseNumber
+  <|> parseBool
 
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
   Left err  -> "No match: " ++ show err
-  Right val -> "Found value"
+  Right val -> "Found value: " ++ show val
 
 main :: IO ()
 main = do
