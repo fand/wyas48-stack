@@ -31,7 +31,10 @@ parseAtom = do
     _    -> Atom atom
 
 parseNumber :: Parser LispVal
-parseNumber = (Number . read) <$> many1 digit
+-- parseNumber = (Number . read) <$> many1 digit
+parseNumber = do
+  str <- many1 digit
+  return ((Number . read) str)
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom <|> parseString <|> parseNumber
