@@ -45,3 +45,17 @@ spec =
     it "parseComplex" $ do
       readExpr "1+2i" `shouldBe` "Found value: Complex (1.0 :+ 2.0)"
       readExpr "1.23+2.46i" `shouldBe` "Found value: Complex (1.23 :+ 2.46)"
+
+
+    it "parseList" $ do
+      readExpr "(a test)" `shouldBe` "Found value: List [Atom \"a\",Atom \"test\"]"
+      readExpr "(a (nested) test)" `shouldBe` "Found value: List [Atom \"a\",List [Atom \"nested\"],Atom \"test\"]"
+      readExpr "(a test" `shouldStartWith` "No match:"
+
+    it "parseDottedList" $ do
+      readExpr "(a b . c)" `shouldBe` "Found value: DottedList [Atom \"a\",Atom \"b\"] (Atom \"c\")"
+      readExpr "(a (b . c) d)" `shouldBe` "Found value: List [Atom \"a\",DottedList [Atom \"b\"] (Atom \"c\"),Atom \"d\"]"
+
+    it "parseQuoted" $ do
+      readExpr "'(a b)" `shouldBe` "Found value: List [Atom \"quote\",List [Atom \"a\",Atom \"b\"]]"
+      readExpr "(a 'b c)" `shouldBe` "Found value: List [Atom \"a\",List [Atom \"quote\",Atom \"b\"],Atom \"c\"]"
