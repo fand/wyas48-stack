@@ -1,6 +1,8 @@
 module EvalSpec (spec) where
 
+import           Control.Monad.Error
 import           Data.Complex
+import           Data.Either
 import           Data.Ratio
 import           Eval
 import           Read
@@ -9,9 +11,12 @@ import           Types
 
 spec :: Spec
 spec =
-  describe "eval" $
-    let re x = extractValue $ readExpr x >>= eval in
+  let
+    re x = extractValue $ readExpr x >>= eval
+    le x = show . head $ lefts [readExpr x >>= eval]
+  in
 
+  describe "eval" $ do
     it "evaluates functions" $ do
       re "(+ 1 2 3)" `shouldBe` Number 6
       re "(- 3 1)" `shouldBe` Number 2
@@ -30,3 +35,12 @@ spec =
       re "(number? 'a)" `shouldBe` Bool False
       re "(boolean? #t)" `shouldBe` Bool True
       re "(boolean? 'f)" `shouldBe` Bool False
+
+    it "throws" $ do
+      le "(symbol? 1 2)" `shouldStartWith` "LispError:"
+      le "(string? 1 2)" `shouldStartWith` "LispError:"
+      le "(number? 1 2)" `shouldStartWith` "LispError:"
+      le "(boolean? 1 2)" `shouldStartWith` "LispError:"
+      le "(+ 2 \"two\")" `shouldStartWith` "Invalid type:"
+      le "(+ 2)" `shouldStartWith` "Expected 2 args;"
+      le "(what? 2)" `shouldStartWith` "Unrecognized primitive function args:"
