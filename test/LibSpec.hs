@@ -6,7 +6,7 @@ import           Lib
 import           Test.Hspec
 
 spec :: Spec
-spec =
+spec = do
   describe "readExpr" $ do
     it "parseString" $ do
       readExpr "\"foo\"" `shouldBe` String "foo"
@@ -61,3 +61,17 @@ spec =
     it "parseQuoted" $ do
       readExpr "'(a b)" `shouldBe` List [Atom "quote", List [Atom "a", Atom "b"]]
       readExpr "(a 'b c)" `shouldBe` List [Atom "a", List [Atom "quote", Atom "b"], Atom "c"]
+
+  describe "eval" $
+    let re = eval . readExpr in
+
+    it "evaluates functions" $ do
+      re "(+ 1 2 3)" `shouldBe` Number 6
+      re "(- 3 1)" `shouldBe` Number 2
+      re "(- 10 1 2)" `shouldBe` Number 7
+      re "(* 1 2 3 4 5)" `shouldBe` Number 120
+      re "(/ 23 7)" `shouldBe` Number 3
+      re "(/ 51 7 3)" `shouldBe` Number 2
+      re "(mod 7 3)" `shouldBe` Number 1
+      re "(quotient 7 3)" `shouldBe` Number 2
+      re "(remainder 7 3)" `shouldBe` Number 1
