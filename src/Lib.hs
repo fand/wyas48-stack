@@ -190,7 +190,23 @@ primitives = [
   ("/", numericBinop div),
   ("mod", numericBinop mod),
   ("quotient", numericBinop quot),
-  ("remainder", numericBinop rem)]
+  ("remainder", numericBinop rem),
+  ("symbol?", \(x:xs) -> case x of
+    Atom x -> Bool True
+    _      -> Bool False
+  ),
+  ("string?", \(x:xs) -> case x of
+    String x -> Bool True
+    _        -> Bool False
+  ),
+  ("number?", \(x:xs) -> case x of
+    Number x -> Bool True
+    _        -> Bool False
+  ),
+  ("boolean?", \(x:xs) -> case x of
+    Bool x -> Bool True
+    _      -> Bool False
+  )]
 
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> LispVal
 numericBinop op params = Number $ foldl1 op $ map unpackNum params
