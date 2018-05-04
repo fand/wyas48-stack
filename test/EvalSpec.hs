@@ -36,6 +36,35 @@ spec =
       re "(boolean? #t)" `shouldBe` Bool True
       re "(boolean? 'f)" `shouldBe` Bool False
 
+      re "(= 1 1)" `shouldBe` Bool True
+      re "(= 1 2)" `shouldBe` Bool False
+      re "(> 1 0)" `shouldBe` Bool True
+      re "(> 1 2)" `shouldBe` Bool False
+      re "(< 1 0)" `shouldBe` Bool False
+      re "(< 1 2)" `shouldBe` Bool True
+      re "(/= 1 1)" `shouldBe` Bool False
+      re "(/= 1 2)" `shouldBe` Bool True
+      re "(>= 1 2)" `shouldBe` Bool False
+      re "(>= 1 1)" `shouldBe` Bool True
+      re "(<= 1 0)" `shouldBe` Bool False
+      re "(<= 1 1)" `shouldBe` Bool True
+      re "(&& #t #t)" `shouldBe` Bool True
+      re "(&& #t #f)" `shouldBe` Bool False
+      re "(&& #f #f)" `shouldBe` Bool False
+      re "(|| #t #t)" `shouldBe` Bool True
+      re "(|| #t #f)" `shouldBe` Bool True
+      re "(|| #f #f)" `shouldBe` Bool False
+      re "(string=? \"a\" \"a\")" `shouldBe` Bool True
+      re "(string=? \"a\" \"b\")" `shouldBe` Bool False
+      re "(string<? \"a\" \"a\")" `shouldBe` Bool False
+      re "(string<? \"a\" \"b\")" `shouldBe` Bool True
+      re "(string>? \"a\" \"a\")" `shouldBe` Bool False
+      re "(string>? \"c\" \"b\")" `shouldBe` Bool True
+      re "(string<=? \"b\" \"a\")" `shouldBe` Bool False
+      re "(string<=? \"b\" \"b\")" `shouldBe` Bool True
+      re "(string>=? \"a\" \"b\")" `shouldBe` Bool False
+      re "(string>=? \"b\" \"b\")" `shouldBe` Bool True
+
     it "throws" $ do
       le "(symbol? 1 2)" `shouldStartWith` "LispError:"
       le "(string? 1 2)" `shouldStartWith` "LispError:"
