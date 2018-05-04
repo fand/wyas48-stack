@@ -20,24 +20,25 @@ apply func args = maybe
   (lookup func primitives)
 
 isSymbol :: [LispVal] -> ThrowsError LispVal
-isSymbol (x:y:xs) = throwError (Default "symbol? can't receive list")
-isSymbol [Atom x] = Right (Bool True)
-isSymbol _        = Right (Bool False)
+isSymbol args@(x:y:xs) = throwError $ NumArgs 1 args
+isSymbol [Atom x]      = Right (Bool True)
+isSymbol _             = Right (Bool False)
 
 isString :: [LispVal] -> ThrowsError LispVal
-isString (x:y:xs)   = throwError (Default "string? can't receive list")
-isString [String x] = Right (Bool True)
-isString _          = Right (Bool False)
+isString args@(x:y:xs) = throwError $ NumArgs 1 args
+isString [String x]    = Right (Bool True)
+isString _             = Right (Bool False)
 
 isNumber :: [LispVal] -> ThrowsError LispVal
-isNumber (x:y:xs)   = throwError (Default "number? can't receive list")
-isNumber [Number x] = Right (Bool True)
-isNumber _          = Right (Bool False)
+
+isNumber args@(x:y:xs) = throwError $ NumArgs 1 args
+isNumber [Number x]    = Right (Bool True)
+isNumber _             = Right (Bool False)
 
 isBoolean :: [LispVal] -> ThrowsError LispVal
-isBoolean (x:y:xs) = throwError (Default "boolean? can't receive list")
-isBoolean [Bool x] = Right (Bool True)
-isBoolean _        = Right (Bool False)
+isBoolean args@(x:y:xs) = throwError $ NumArgs 1 args
+isBoolean [Bool x]      = Right (Bool True)
+isBoolean _             = Right (Bool False)
 
 primitives :: [(String, [LispVal] -> ThrowsError LispVal)]
 primitives = [

@@ -66,10 +66,10 @@ spec =
       re "(string>=? \"b\" \"b\")" `shouldBe` Bool True
 
     it "throws" $ do
-      le "(symbol? 1 2)" `shouldStartWith` "LispError:"
-      le "(string? 1 2)" `shouldStartWith` "LispError:"
-      le "(number? 1 2)" `shouldStartWith` "LispError:"
-      le "(boolean? 1 2)" `shouldStartWith` "LispError:"
+      le "(symbol? 1 2)" `shouldStartWith` "Expected 1 args;"
+      le "(string? 1 2)" `shouldStartWith` "Expected 1 args;"
+      le "(number? 1 2)" `shouldStartWith` "Expected 1 args;"
+      le "(boolean? 1 2)" `shouldStartWith` "Expected 1 args;"
       le "(+ 2 \"two\")" `shouldStartWith` "Invalid type:"
       le "(+ 2)" `shouldStartWith` "Expected 2 args;"
       le "(what? 2)" `shouldStartWith` "Unrecognized primitive function args:"
