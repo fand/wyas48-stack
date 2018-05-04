@@ -1,6 +1,8 @@
-module Lib
-    ( readExpr
-    ) where
+module Lib (
+  readExpr,
+  eval,
+  LispVal(..)
+) where
 
 import           Control.Monad
 import           Data.Complex
@@ -167,7 +169,16 @@ unwordsList = unwords . map showVal
 
 instance Show LispVal where show = showVal
 
-readExpr :: String -> String
+instance Eq LispVal where
+  (==) a b = show a == show b
+
+eval ::LispVal -> LispVal
+eval val@(String _)             = val
+eval val@(Number _)             = val
+eval val@(Bool _)               = val
+eval (List [Atom "quote", val]) = val
+
+readExpr :: String -> LispVal
 readExpr input = case parse parseExpr "lisp" input of
-  Left err  -> "No match: " ++ show err
-  Right val -> "Found value: " ++ show val
+  Left err  -> String $ "No match: " ++ show err
+  Right val -> val
