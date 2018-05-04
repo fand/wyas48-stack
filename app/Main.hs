@@ -1,6 +1,7 @@
 module Main where
 
-import           Lib
+import           Eval
+import           Read
 import           System.Environment
 
 main :: IO ()

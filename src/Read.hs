@@ -1,25 +1,13 @@
-module Lib (
-  readExpr,
-  eval,
-  LispVal(..)
+module Read (
+  readExpr
 ) where
 
 import           Control.Monad
 import           Data.Complex
 import           Data.Ratio
+import           LispVal
 import           Numeric
 import           Text.ParserCombinators.Parsec
-
-data LispVal = Atom String
-             | List [LispVal]
-             | DottedList [LispVal] LispVal
-             | Number Integer
-             | Float Double
-             | Ratio Rational
-             | Complex (Complex Double)
-             | String String
-             | Bool Bool
-             | Character Char
 
 symbol :: Parser Char
 symbol = oneOf "!$%&|*+-/:<=>?@^_~"
@@ -144,81 +132,6 @@ parseExpr = parseAtom
     return x
   <|> try parseBool
   <|> try parseCharacter
-
-
--- Evaluator
-showVal :: LispVal -> String
-showVal (String contents) = "\"" ++ contents ++ "\""
-showVal (Atom name)       = name
-showVal (Number contents) = show contents
-showVal (Bool True)       = "#t"
-showVal (Bool False)      = "#f"
-showVal (List contents)   = "(" ++ unwordsList contents ++ ")"
-showVal (DottedList head tail) = "(" ++ unwordsList head ++ " . " ++ showVal tail ++ ")"
-showVal (Character content) = case content of
-  ' '  -> "#\\space"
-  '\n' -> "#\\newline"
-  _    -> "#\\" ++ [content]
-showVal (Float x) = show x
-showVal (Ratio x) = show x
-showVal (Complex x) = show x
-
-
-unwordsList :: [LispVal] -> String
-unwordsList = unwords . map showVal
-
-instance Show LispVal where show = showVal
-
-instance Eq LispVal where
-  (==) a b = show a == show b
-
-eval ::LispVal -> LispVal
-eval val@(String _)             = val
-eval val@(Number _)             = val
-eval val@(Bool _)               = val
-eval (List [Atom "quote", val]) = val
-eval (List (Atom func : args))  = apply func $ map eval args
-
-apply :: String -> [LispVal] -> LispVal
-apply func args = maybe (Bool False) ($ args) $ lookup func primitives
-
-primitives :: [(String, [LispVal] -> LispVal)]
-primitives = [
-  ("+", numericBinop (+)),
-  ("-", numericBinop (-)),
-  ("*", numericBinop (*)),
-  ("/", numericBinop div),
-  ("mod", numericBinop mod),
-  ("quotient", numericBinop quot),
-  ("remainder", numericBinop rem),
-  ("symbol?", \(x:xs) -> case x of
-    Atom x -> Bool True
-    _      -> Bool False
-  ),
-  ("string?", \(x:xs) -> case x of
-    String x -> Bool True
-    _        -> Bool False
-  ),
-  ("number?", \(x:xs) -> case x of
-    Number x -> Bool True
-    _        -> Bool False
-  ),
-  ("boolean?", \(x:xs) -> case x of
-    Bool x -> Bool True
-    _      -> Bool False
-  )]
-
-numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> LispVal
-numericBinop op params = Number $ foldl1 op $ map unpackNum params
-
-unpackNum :: LispVal -> Integer
-unpackNum (Number n) = n
-unpackNum (String n) = let parsed = reads n in
-  if null parsed
-    then 0
-    else fst $ head parsed
-unpackNum (List [n])     = unpackNum n
-unpackNum _ = 0
 
 readExpr :: String -> LispVal
 readExpr input = case parse parseExpr "lisp" input of
