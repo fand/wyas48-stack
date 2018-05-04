@@ -3,14 +3,14 @@ module EvalSpec (spec) where
 import           Data.Complex
 import           Data.Ratio
 import           Eval
-import           LispVal
 import           Read
 import           Test.Hspec
+import           Types
 
 spec :: Spec
 spec =
   describe "eval" $
-    let re = eval . readExpr in
+    let re x = extractValue $ readExpr x >>= eval in
 
     it "evaluates functions" $ do
       re "(+ 1 2 3)" `shouldBe` Number 6

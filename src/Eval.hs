@@ -2,19 +2,44 @@ module Eval (
   eval
 ) where
 
-import           LispVal
+import           Control.Monad.Error
+import           Types
 
-eval :: LispVal -> LispVal
-eval val@(String _)             = val
-eval val@(Number _)             = val
-eval val@(Bool _)               = val
-eval (List [Atom "quote", val]) = val
-eval (List (Atom func : args))  = apply func $ map eval args
+eval :: LispVal -> ThrowsError LispVal
+eval val@(String _) = return val
+eval val@(Number _) = return val
+eval val@(Bool _) = return val
+eval (List [Atom "quote", val]) = return val
+eval (List (Atom func : args)) = mapM eval args >>= apply func
+eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
-apply :: String -> [LispVal] -> LispVal
-apply func args = maybe (Bool False) ($ args) $ lookup func primitives
+apply :: String -> [LispVal] -> ThrowsError LispVal
+apply func args = maybe
+  (throwError $ NotFunction "Unrecognized primitive function args" func)
+  ($ args)
+  (lookup func primitives)
 
-primitives :: [(String, [LispVal] -> LispVal)]
+isSymbol :: [LispVal] -> ThrowsError LispVal
+isSymbol (x:y:xs) = throwError (Default "symbol? can't receive list")
+isSymbol [Atom x] = Right (Bool True)
+isSymbol _        = Right (Bool False)
+
+isString :: [LispVal] -> ThrowsError LispVal
+isString (x:y:xs)   = throwError (Default "string? can't receive list")
+isString [String x] = Right (Bool True)
+isString _          = Right (Bool False)
+
+isNumber :: [LispVal] -> ThrowsError LispVal
+isNumber (x:y:xs)   = throwError (Default "number? can't receive list")
+isNumber [Number x] = Right (Bool True)
+isNumber _          = Right (Bool False)
+
+isBoolean :: [LispVal] -> ThrowsError LispVal
+isBoolean (x:y:xs) = throwError (Default "boolean? can't receive list")
+isBoolean [Bool x] = Right (Bool True)
+isBoolean _        = Right (Bool False)
+
+primitives :: [(String, [LispVal] -> ThrowsError LispVal)]
 primitives = [
   ("+", numericBinop (+)),
   ("-", numericBinop (-)),
@@ -23,31 +48,21 @@ primitives = [
   ("mod", numericBinop mod),
   ("quotient", numericBinop quot),
   ("remainder", numericBinop rem),
-  ("symbol?", \(x:xs) -> case x of
-    Atom x -> Bool True
-    _      -> Bool False
-  ),
-  ("string?", \(x:xs) -> case x of
-    String x -> Bool True
-    _        -> Bool False
-  ),
-  ("number?", \(x:xs) -> case x of
-    Number x -> Bool True
-    _        -> Bool False
-  ),
-  ("boolean?", \(x:xs) -> case x of
-    Bool x -> Bool True
-    _      -> Bool False
-  )]
+  ("symbol?", isSymbol),
+  ("string?", isString),
+  ("number?", isNumber),
+  ("boolean?", isBoolean)
+  ]
 
-numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> LispVal
-numericBinop op params = Number $ foldl1 op $ map unpackNum params
+numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> ThrowsError LispVal
+numericBinop op singleVal@[_] = throwError $ NumArgs 2 singleVal
+numericBinop op params = fmap (Number . foldl1 op) (mapM unpackNum params)
 
-unpackNum :: LispVal -> Integer
-unpackNum (Number n) = n
+unpackNum :: LispVal -> ThrowsError Integer
+unpackNum (Number n) = return n
 unpackNum (String n) = let parsed = reads n in
   if null parsed
-    then 0
-    else fst $ head parsed
-unpackNum (List [n])     = unpackNum n
-unpackNum _ = 0
+    then throwError $ TypeMismatch "number" $ String n
+    else return $ fst $ head parsed
+unpackNum (List [n]) = unpackNum n
+unpackNum notNum = throwError $ TypeMismatch "number" notNum
