@@ -65,6 +65,9 @@ spec =
       re "(string>=? \"a\" \"b\")" `shouldBe` Bool False
       re "(string>=? \"b\" \"b\")" `shouldBe` Bool True
 
+      re "(if (> 2 3) \"foo\" \"bar\")" `shouldBe` String "bar"
+      re "(if (= 3 3) (+ 2 3 (- 5 1)) \"unequal\")" `shouldBe` Number 9
+
     it "throws" $ do
       le "(symbol? 1 2)" `shouldStartWith` "Expected 1 args;"
       le "(string? 1 2)" `shouldStartWith` "Expected 1 args;"
