@@ -96,3 +96,4 @@ spec =
       le "(+ 2 \"two\")" `shouldStartWith` "Invalid type:"
       le "(+ 2)" `shouldStartWith` "Expected 2 args;"
       le "(what? 2)" `shouldStartWith` "Unrecognized primitive function args:"
+      le "(if 1 2 3)" `shouldStartWith` "Invalid type:"

@@ -16,7 +16,8 @@ eval (List [Atom "if", pred, conseq, alt]) = do
   cond <- eval pred
   case cond of
     Bool False -> eval alt
-    _          -> eval conseq
+    Bool True  -> eval conseq
+    x          -> throwError $ TypeMismatch "boolean" x
 eval (List (Atom func : args)) = mapM eval args >>= apply func
 
 eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
@@ -161,7 +162,7 @@ unpackEquals arg1 arg2 (AnyUnpacker unpacker) = do
 
 equal :: [LispVal] -> ThrowsError LispVal
 equal [arg1, arg2] = do
-  primitiveEquals <- fmap or $ mapM (unpackEquals arg1 arg2)
+  primitiveEquals <- or <$> mapM (unpackEquals arg1 arg2)
     [AnyUnpacker unpackNum, AnyUnpacker unpackStr, AnyUnpacker unpackBool]
   eqvEquals <- eqv [arg1, arg2]
   return $ Bool (primitiveEquals || let (Bool x) = eqvEquals in x)
