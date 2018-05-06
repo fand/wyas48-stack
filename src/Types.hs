@@ -3,11 +3,21 @@ module Types (
   LispError(..),
   ThrowsError,
   trapError,
-  extractValue
+  extractValue,
+  Env,
+  nullEnv,
+  IOThrowsError,
+  liftThrows,
+  runIOThrows,
+  getVar,
+  setVar,
+  defineVar
 ) where
 
 import           Control.Monad.Error
 import           Data.Complex
+import           Data.IORef
+import           Data.Maybe
 import           Text.ParserCombinators.Parsec
 
 data LispVal = Atom String
@@ -77,3 +87,56 @@ trapError action = catchError action (return . show)
 
 extractValue :: ThrowsError a -> a
 extractValue (Right val) = val
+
+type Env = IORef [(String, IORef LispVal)]
+
+nullEnv :: IO Env
+nullEnv = newIORef []
+
+type IOThrowsError = ErrorT LispError IO
+
+liftThrows :: ThrowsError a -> IOThrowsError a
+liftThrows (Left err)  = throwError err
+liftThrows (Right val) = return val
+
+runIOThrows :: IOThrowsError String -> IO String
+runIOThrows action = fmap extractValue (runErrorT (trapError action))
+
+isBound :: Env -> String -> IO Bool
+isBound envRef var = readIORef envRef >>= return . isJust . lookup var
+
+-- Env, 変数名を受け取り、IORefから変数を取り出す
+getVar :: Env -> String -> IOThrowsError LispVal
+getVar envRef var = do
+  env <- liftIO $ readIORef envRef
+  maybe (throwError $ UnboundVar "Getting an unbound variable: " var)
+    (liftIO . readIORef)
+    (lookup var env)
+
+setVar :: Env -> String -> LispVal -> IOThrowsError LispVal
+setVar envRef var value = do
+  env <- liftIO $ readIORef envRef
+  maybe (throwError $ UnboundVar "Setting an unbound variable: " var)
+    (liftIO . flip writeIORef value)
+    (lookup var env)
+  return value
+
+-- 環境、変数名、値、結果
+defineVar :: Env -> String -> LispVal -> IOThrowsError LispVal
+defineVar envRef var value = do
+  alreadyDefined <- liftIO $ isBound envRef var
+  if alreadyDefined
+    then setVar envRef var value >> return value
+    else liftIO $ do
+      valueRef <- newIORef value
+      env <- readIORef envRef
+      writeIORef envRef ((var, valueRef) : env)
+      return value
+
+bindVars :: Env -> [(String, LispVal)] -> IO Env
+bindVars envRef bindings = readIORef envRef >>= extendEnv bindings >>= newIORef
+  where
+    extendEnv bindings env = fmap (++ env) (mapM addBinding bindings)
+    addBinding (var, value) = do
+      ref <- newIORef value
+      return (var, ref)
