@@ -1,10 +1,12 @@
 {-# LANGUAGE ExistentialQuantification #-}
 
 module Eval (
-  eval
+  eval,
+  primitives
 ) where
 
 import           Control.Monad.Error
+import           Data.Maybe
 import           Types
 
 eval :: Env -> LispVal -> IOThrowsError LispVal
@@ -23,15 +25,36 @@ eval env (List [Atom "define", Atom var, form]) =
   eval env form >>= defineVar env var
 eval env (List [Atom "set!", Atom var, form]) =
   eval env form >>= setVar env var
-eval env (List (Atom func : args)) = mapM (eval env) args >>= liftThrows . apply func
-
+eval env (List (Atom "define" : List (Atom var : params) : body)) =
+  makeNormalFunc env params body >>= defineVar env var
+eval env (List (Atom "define" : DottedList (Atom var : params) varargs : body)) =
+  makeVarargs varargs env params body >>= defineVar env var
+eval env (List (Atom "lambda" : List params : body)) =
+  makeNormalFunc env params body
+eval env (List (Atom "lambda" : DottedList params varargs : body)) =
+  makeVarargs varargs env params body
+eval env (List (Atom "lambda" : varargs@(Atom _) : body)) =
+  makeVarargs varargs env [] body
+eval env (List (function : args)) = do
+  func <- eval env function
+  argVals <- mapM (eval env) args
+  apply func argVals
+-- eval env (List (Atom func : args)) = mapM (eval env) args >>= liftThrows . apply func
 eval env badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
-apply :: String -> [LispVal] -> ThrowsError LispVal
-apply func args = maybe
-  (throwError $ NotFunction "Unrecognized primitive function args" func)
-  ($ args)
-  (lookup func primitives)
+apply :: LispVal -> [LispVal] -> IOThrowsError LispVal
+apply (PrimitiveFunc func) args = liftThrows $ func args
+apply (Func params varargs body closure) args =
+  if num params /= num args && isNothing varargs
+    then throwError $ NumArgs (num params) args
+    else liftIO (bindVars closure $ zip params args) >>= bindVarArgs varargs >>= evalBody
+  where
+    remainingArgs = drop (length params) args
+    num = toInteger . length
+    evalBody env = last <$> mapM (eval env) body
+    bindVarArgs arg env = case arg of
+      Just argsName -> liftIO $ bindVars env [(argsName, List remainingArgs)]
+      Nothing       -> return env
 
 isSymbol :: [LispVal] -> ThrowsError LispVal
 isSymbol args@(x:y:xs) = throwError $ NumArgs 1 args
