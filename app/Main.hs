@@ -1,5 +1,6 @@
 module Main where
 
+import           Env
 import           Eval
 import           Read
 import           System.Environment

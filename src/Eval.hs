@@ -7,6 +7,7 @@ module Eval (
 
 import           Control.Monad.Error
 import           Data.Maybe
+import           Env
 import           Types
 
 eval :: Env -> LispVal -> IOThrowsError LispVal
