@@ -3,17 +3,35 @@ module EvalSpec (spec) where
 import           Control.Monad.Error
 import           Data.Complex
 import           Data.Either
+import           Data.IORef
 import           Data.Ratio
+import           Env
 import           Eval
 import           Read
+import           System.IO.Unsafe
 import           Test.Hspec
 import           Types
+
+
+-- same as Main.hs
+primitiveBindings :: IO Env
+primitiveBindings = nullEnv >>= flip bindVars (map makePrimitiveFunc primitives)
+  where makePrimitiveFunc (var, func) = (var, PrimitiveFunc func)
+
+runIOThrowsToLispVal :: IOThrowsError LispVal -> IO LispVal
+runIOThrowsToLispVal action = fmap extractValue (runErrorT action)
 
 spec :: Spec
 spec =
   let
-    re x = extractValue $ readExpr x >>= eval
-    le x = show . head $ lefts [readExpr x >>= eval]
+    re expr = unsafePerformIO $ do
+      env <- primitiveBindings
+      val <- runIOThrowsToLispVal $ liftThrows $ readExpr expr
+      runIOThrowsToLispVal $ eval env val
+
+    le expr = unsafePerformIO $ do
+      env <- primitiveBindings
+      evalString env expr
   in
 
   describe "eval" $ do
@@ -95,5 +113,5 @@ spec =
       le "(boolean? 1 2)" `shouldStartWith` "Expected 1 args;"
       le "(+ 2 \"two\")" `shouldStartWith` "Invalid type:"
       le "(+ 2)" `shouldStartWith` "Expected 2 args;"
-      le "(what? 2)" `shouldStartWith` "Unrecognized primitive function args:"
+      le "(what? 2)" `shouldBe` "Getting an unbound variable: : what?"
       le "(if 1 2 3)" `shouldStartWith` "Invalid type:"

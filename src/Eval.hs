@@ -2,12 +2,15 @@
 
 module Eval (
   eval,
+  evalAndPrint,
+  evalString,
   primitives
 ) where
 
 import           Control.Monad.Error
 import           Data.Maybe
 import           Env
+import           Read
 import           Types
 
 eval :: Env -> LispVal -> IOThrowsError LispVal
@@ -196,3 +199,10 @@ equal [arg1, arg2] = do
   eqvEquals <- eqv [arg1, arg2]
   return $ Bool (primitiveEquals || let (Bool x) = eqvEquals in x)
 equal badArgs = throwError $ NumArgs 2 badArgs
+
+evalString :: Env -> String -> IO String
+evalString env expr =
+  runIOThrows $ fmap show $ liftThrows (readExpr expr) >>= eval env
+
+evalAndPrint :: Env -> String -> IO ()
+evalAndPrint env expr = evalString env expr >>= putStrLn
