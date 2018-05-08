@@ -21,19 +21,23 @@ primitiveBindings = nullEnv >>= flip bindVars (map makePrimitiveFunc primitives)
 runIOThrowsToLispVal :: IOThrowsError LispVal -> IO LispVal
 runIOThrowsToLispVal action = fmap extractValue (runErrorT action)
 
+exprToVal :: String -> IOThrowsError LispVal
+exprToVal expr = liftThrows $ readExpr expr
+
+evalExpr :: Env -> String -> IO LispVal
+evalExpr env expr = runIOThrowsToLispVal $ exprToVal expr >>= eval env
+
+re expr = unsafePerformIO $ do
+  env <- primitiveBindings
+  evalExpr env expr
+
+le expr = unsafePerformIO $ do
+  env <- primitiveBindings
+  evalString env expr
+
+
 spec :: Spec
-spec =
-  let
-    re expr = unsafePerformIO $ do
-      env <- primitiveBindings
-      val <- runIOThrowsToLispVal $ liftThrows $ readExpr expr
-      runIOThrowsToLispVal $ eval env val
-
-    le expr = unsafePerformIO $ do
-      env <- primitiveBindings
-      evalString env expr
-  in
-
+spec = do
   describe "eval" $ do
     it "evaluates functions" $ do
       re "(+ 1 2 3)" `shouldBe` Number 6
@@ -115,3 +119,30 @@ spec =
       le "(+ 2)" `shouldStartWith` "Expected 2 args;"
       le "(what? 2)" `shouldBe` "Getting an unbound variable: : what?"
       le "(if 1 2 3)" `shouldStartWith` "Invalid type:"
+
+  describe "env" $ do
+    it "defines functions" $ do
+      env <- primitiveBindings
+
+      evalExpr env "(define (f x y) (+ x y))"
+      unsafePerformIO (evalExpr env "(f 1 2)") `shouldBe` Number 3
+
+      evalExpr env "(define (factorial x) (if (= x 1) 1 (* x (factorial (- x 1)))))"
+      unsafePerformIO (evalExpr env "(factorial 10)") `shouldBe` Number 3628800
+
+      evalExpr env "(define (counter inc) (lambda (x) (set! inc (+ x inc)) inc))"
+      evalExpr env "(define my-count (counter 5))"
+      unsafePerformIO (evalExpr env "(my-count 3)") `shouldBe` Number 8
+      unsafePerformIO (evalExpr env "(my-count 6)") `shouldBe` Number 14
+      unsafePerformIO (evalExpr env "(my-count 5)") `shouldBe` Number 19
+
+    it "fails if function is not defined" $
+      le "(f 1 2)" `shouldBe` "Getting an unbound variable: : f"
+
+    it "defines functions" $ do
+      env <- primitiveBindings
+      evalExpr env "(define (f x y) (+ x y))"
+      unsafePerformIO (evalExpr env "(f 1 2)") `shouldBe` Number 3
+
+    it "fails if function is not defined" $
+      le "(f 1 2)" `shouldBe` "Getting an unbound variable: : f"
