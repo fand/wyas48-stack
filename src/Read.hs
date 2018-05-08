@@ -1,5 +1,6 @@
 module Read (
-  readExpr
+  readExpr,
+  readExprList
 ) where
 
 import           Control.Monad
@@ -134,7 +135,13 @@ parseExpr = parseAtom
   <|> try parseBool
   <|> try parseCharacter
 
-readExpr :: String -> ThrowsError LispVal
-readExpr input = case parse parseExpr "lisp" input of
+readOrThrow :: Parser a -> String -> ThrowsError a
+readOrThrow parser input = case parse parser "lisp" input of
   Left err  -> throwError $ Parser err
   Right val -> return val
+
+readExpr :: String -> ThrowsError LispVal
+readExpr = readOrThrow parseExpr
+
+readExprList :: String -> ThrowsError [LispVal]
+readExprList = readOrThrow (endBy parseExpr spaces)

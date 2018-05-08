@@ -27,13 +27,17 @@ primitiveBindings = nullEnv >>= flip bindVars (map makePrimitiveFunc primitives)
 runRepl :: IO ()
 runRepl = primitiveBindings >>= until_ (== "quit") (readPrompt "Lisp>>> ") . evalAndPrint
 
-runOne :: String -> IO ()
-runOne expr = primitiveBindings >>= flip evalAndPrint expr
+-- 引数を、loadするファイル
+-- $ stack exec wyas48-stack-exe "loadしたいlispプログラムのファイル名"  <lispプログラムの引数>
+runOne :: [String] -> IO ()
+runOne args = do
+  env <- primitiveBindings >>= flip bindVars [("args", List $ map String $ drop 1 args)]
+  runIOThrows (show <$> eval env (List [Atom "load", String (head args)]))
+    >>= hPutStrLn stderr
 
 main :: IO ()
 main = do
   args <- getArgs
-  case length args of
-    0 -> runRepl
-    1 -> runOne $ head args
-    _ -> putStrLn "Program takes only 0 or 1 argument"
+  if null args
+    then runRepl
+    else runOne args

@@ -15,6 +15,7 @@ module Types (
 import           Control.Monad.Error
 import           Data.Complex
 import           Data.IORef
+import           System.IO
 import           Text.ParserCombinators.Parsec
 
 data LispVal = Atom String
@@ -33,6 +34,8 @@ data LispVal = Atom String
                vararg  :: Maybe String,
                body    :: [LispVal],
                closure :: Env }
+             | IOFunc ([LispVal] -> IOThrowsError LispVal)
+             | Port Handle
 
 showVal :: LispVal -> String
 showVal (String contents) = "\"" ++ contents ++ "\""
@@ -56,6 +59,8 @@ showVal Func { params = args, vararg = varargs, body = body, closure = env } =
       Nothing  -> ""
       Just arg -> " . " ++arg
   ) ++ ") ...)"
+showVal (Port _) = "<IO port>"
+showVal (IOFunc _) = "<IO primitive>"
 
 unwordsList :: [LispVal] -> String
 unwordsList = unwords . map showVal

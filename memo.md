@@ -7,5 +7,8 @@
 - Control.Monad.Error 使ってるとこに `Use Control.Monad.Except instead` とメッセージ出るけど、こういうことっぽい
   - http://koba-e964.hatenablog.com/entry/2014/06/17/004011
 - Hlintの声に従って変換していくとドンドン読みにくくなる気がする
+  - `liftM List $ load filename` が
+  - `fmap List $ load filename` となり
+  - `List <$> load filename` となる
 - maybe関数の引数の順序難しい
   - maybe 失敗した場合に返す値 成功した場合に値を適用させる関数 Maybeモナド
